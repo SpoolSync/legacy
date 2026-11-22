@@ -1,0 +1,2 @@
+{"name":"Legacy","short_name":"Legacy","description":"Where your will is, who to call, insurance and wishes. Private, by Pixora.","start_url":"./","scope":"./","display":"standalone","background_color":"#eceef1","theme_color":"#eceef1",
+ "icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
