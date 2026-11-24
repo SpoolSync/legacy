@@ -168,6 +168,7 @@ function readView(d,who){
 }
 function settingsView(){
   var h='<button class="btn q s" data-act="tab" data-t="file" style="align-self:flex-start">← Back</button><h1>Settings</h1>';
+  h+='<section class="card"><h2>Ideas or problems?</h2><p class="small muted">Tell Sachin what would make Legacy better or what went wrong. Nothing from your data is sent.</p><div class="row"><button class="btn" data-act="feedback">Send feedback</button></div></section>';
   h+='<section class="card"><h2>Account</h2>'+(K.local?'<p class="small">On this phone only.</p><div class="row"><button class="btn" data-act="join">Sign in or create a Pixora account</button></div>':
     '<p class="small">Signed in as '+esc(K.email||"")+'. Your file is encrypted on this phone before it syncs. Nobody else can read it, not even Pixora.</p><div class="row"><button class="btn q" data-act="signout">Sign out</button></div>')+'</section>';
   h+='<section class="card"><h2>Delete my Legacy data</h2><p class="note">Deletes your file, removes your trusted people and their copies, and steps you down from files shared with you. Your Pixora login and other apps aren\'t affected. To delete the Pixora login itself, email pixora3dstudios@gmail.com.</p><div class="row"><button class="btn d" data-act="delall">Delete my Legacy data</button></div></section>';
@@ -303,6 +304,7 @@ document.addEventListener("click",async function(e){
     for(i=0;i<shared.length;i++)await G(shared[i].id).delete().catch(function(){});
     tab="file";await K.deleteAppData();toast("Your Legacy data is deleted. Your Pixora login still works.");
   }
+  else if(a==="feedback"){if(window.PixoraFeedback)PixoraFeedback.open("legacy","Legacy");}
   else if(a==="join")K.joinAccount();
   else if(a==="signout"){unsubs.forEach(function(u){u();});unsubs=[];K.signOut();}
   }catch(x){b.disabled=false;toast("Couldn't do that. Check the connection and try again.");}
