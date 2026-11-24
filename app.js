@@ -168,6 +168,7 @@ function readView(d,who){
 }
 function settingsView(){
   var h='<button class="btn q s" data-act="tab" data-t="file" style="align-self:flex-start">← Back</button><h1>Settings</h1>';
+  h+='<section class="card"><h2>Your copy</h2><p class="small muted">Download everything in Legacy as a file you keep, and bring it back here or on a new phone. It\'s a plain file, not encrypted, so keep it somewhere private, like a password manager or with your will. It doesn\'t include your trusted people.</p><div class="row"><button class="btn" data-act="export">Download a copy</button><label class="btn q" style="cursor:pointer">Restore from a copy<input type="file" id="restore" accept=".json,application/json" hidden></label></div></section>';
   h+='<section class="card"><h2>Ideas or problems?</h2><p class="small muted">Tell Sachin what would make Legacy better or what went wrong. Nothing from your data is sent.</p><div class="row"><button class="btn" data-act="feedback">Send feedback</button></div></section>';
   h+='<section class="card"><h2>Account</h2>'+(K.local?'<p class="small">On this phone only.</p><div class="row"><button class="btn" data-act="join">Sign in or create a Pixora account</button></div>':
     '<p class="small">Signed in as '+esc(K.email||"")+'. Your file is encrypted on this phone before it syncs. Nobody else can read it, not even Pixora.</p><div class="row"><button class="btn q" data-act="signout">Sign out</button></div>')+'</section>';
@@ -304,6 +305,7 @@ document.addEventListener("click",async function(e){
     for(i=0;i<shared.length;i++)await G(shared[i].id).delete().catch(function(){});
     tab="file";await K.deleteAppData();toast("Your Legacy data is deleted. Your Pixora login still works.");
   }
+  else if(a==="export")K.exportCopy();
   else if(a==="feedback"){if(window.PixoraFeedback)PixoraFeedback.open("legacy","Legacy");}
   else if(a==="join")K.joinAccount();
   else if(a==="signout"){unsubs.forEach(function(u){u();});unsubs=[];K.signOut();}
@@ -320,6 +322,8 @@ function pendingJoin(){try{var v=sessionStorage.getItem("legacy-join");sessionSt
 K.boot({
   app:"legacy",title:"Legacy",version:"legacy-v1",blurb:"Where your will is, who to call, insurance and wishes, for the people you trust.",
   clean:L.clean,
+  exportable:function(s){return {me:s.me,items:s.items,wishes:s.wishes,reviewed:s.reviewed,ts:s.ts};},
+  restore:function(cur,f){f.grants=cur.grants;f.invites=cur.invites;f.keys=cur.keys;return f;},
   onOpen:function(s,o){S=s;if(o&&o.fresh){mine=[];shared=[];copied={};}viewing=null;listen();render();fillCodes();
     var j=pendingJoin();if(j)joinFlow(j[0],j[1]);},
   onRemote:function(s){S=s;queueCopies();rerender();fillCodes();},
@@ -327,4 +331,14 @@ K.boot({
   onGate:function(shown){$("#app").hidden=shown;$("#tabs").hidden=shown;},
   /* For Pixora Today: only how complete and fresh the file is, never what's in it. */
   summary:function(s){return {d:iso(),n:L.count(s),reviewed:s.reviewed,due:L.reviewDue(s,iso())};}
+});
+
+document.addEventListener("change",function(e){
+  if(e.target.id!=="restore"||!e.target.files[0])return;
+  var f=e.target.files[0],r=new FileReader();e.target.value="";
+  r.onload=function(){
+    if(!confirm("Replace what's in Legacy now with this copy? What's here now is replaced."))return;
+    try{K.restoreCopy(String(r.result));toast("Restored from your copy.");}
+    catch(x){toast(x&&x.code==="wrongapp"?"That copy is from "+(x.app||"another app")+", not Legacy.":"That file isn't a Legacy copy.");}
+  };r.readAsText(f);
 });
