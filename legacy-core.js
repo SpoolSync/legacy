@@ -32,7 +32,8 @@ function kindLabel(list,v){var x=(KINDS[list]||[]).filter(function(k){return k[0
 function clean(s){
   s=s&&typeof s==="object"?s:{};
   var o={ts:+s.ts||0,me:{name:str(s.me&&s.me.name,60)},items:{},wishes:str(s.wishes,6000),reviewed:/^\d{4}-\d{2}-\d{2}$/.test(s.reviewed)?s.reviewed:"",
-    grants:{},invites:{},keys:null};
+    grants:{},invites:{},keys:null,card:{note:str(s.card&&s.card.note,160),c1:str(s.card&&s.card.c1,24),c2:str(s.card&&s.card.c2,24)},ticks:{}};
+  if(s.ticks&&typeof s.ticks==="object")Object.keys(s.ticks).slice(0,20).forEach(function(g){var t=s.ticks[g];if(t&&typeof t==="object"){o.ticks[g]={};Object.keys(t).slice(0,40).forEach(function(k){if(t[k])o.ticks[g][k]=1;});}});
   SECTIONS.forEach(function(sec){
     o.items[sec.k]=(s.items&&Array.isArray(s.items[sec.k])?s.items[sec.k]:[]).slice(0,200).filter(function(x){return x&&x.id;}).map(function(x){
       var y={id:str(x.id,24)};sec.f.forEach(function(f){y[f[0]]=f[2]==="l"?last4(x[f[0]]):str(x[f[0]],LIM[f[2]]);});return y;});
@@ -54,9 +55,39 @@ function risky(text){
 function count(s){var n=0;SECTIONS.forEach(function(sec){n+=(s.items[sec.k]||[]).length;});return n+(s.wishes?1:0);}
 /* What a trusted person receives: the file only, never keys or invites. */
 function shareable(s){return {v:1,me:s.me,items:s.items,wishes:s.wishes,reviewed:s.reviewed,ts:s.ts};}
+/* What a well-kept file has. Each: [key, label, done?, what to add]. */
+function checklist(s,today,hasTrusted){
+  var it=s.items,has=function(sec,f){return (it[sec]||[]).some(f||function(){return true;});};
+  return [
+    ["will","Where your original will is",has("docs",function(x){return x.kind==="will"&&x.where;}),"docs"],
+    ["executor","Who your executor is",has("people",function(x){return x.role==="executor";}),"people"],
+    ["poa","Powers of attorney (property and personal care)",has("docs",function(x){return x.kind==="poa-property";})&&has("docs",function(x){return x.kind==="poa-care";})||has("people",function(x){return x.role==="poa-property";})&&has("people",function(x){return x.role==="poa-care";}),"docs"],
+    ["insurance","Insurance and who it pays",has("insurance",function(x){return x.benef;}),"insurance"],
+    ["accounts","Bank accounts, registered plans and pensions",has("accounts"),"accounts"],
+    ["bills","Bills and debts to settle or cancel",has("bills"),"bills"],
+    ["digital","How to get into phones and online accounts",has("digital"),"digital"],
+    ["wishes","Your wishes",!!s.wishes,"wishes"],
+    ["trusted","A trusted person who can open it",!!hasTrusted,"trust"],
+    ["reviewed","Reviewed in the last year",!reviewDue(s,today),"review"]
+  ];
+}
+/* First steps for the person settling things in Ontario. General information from public sources, not legal advice. */
+var FIRST_STEPS=[
+  ["will","Find the original will. A copy usually isn't enough for probate."],
+  ["certs","Get several copies of the death certificate or the funeral director's statement of death."],
+  ["funeral","Arrange the funeral or memorial, following the wishes in this file."],
+  ["canada","Tell the federal government (Service Canada, 1-800-277-9914): CPP, OAS, the Social Insurance Number and benefits. Search \"what to do when someone dies\" on canada.ca."],
+  ["ontario","Cancel the health card, driver's licence and other Ontario IDs. ontario.ca/death has the steps."],
+  ["insurers","Call each insurer in this file to start the claims."],
+  ["banks","Tell the banks and investment firms. Ask what they need to release or transfer accounts."],
+  ["bills","Cancel or settle the bills and subscriptions listed here."],
+  ["probate","Ask a lawyer whether probate (a Certificate of Appointment of Estate Trustee) is needed."],
+  ["eir","If there's probate in Ontario, file the Estate Information Return within 90 days of the certificate."],
+  ["tax","File the final tax return (and an estate T3 if needed) and ask the CRA for a clearance certificate before giving out everything."]
+];
 function daysBetween(a,b){return Math.round((Date.parse(b+"T12:00:00")-Date.parse(a+"T12:00:00"))/864e5);}
 /* A file gets stale: a reminder once a year. */
 function reviewDue(s,today){return !s.reviewed||daysBetween(s.reviewed,today)>=365;}
-var api={KINDS:KINDS,SECTIONS:SECTIONS,clean:clean,last4:last4,risky:risky,count:count,shareable:shareable,kindLabel:kindLabel,reviewDue:reviewDue,daysBetween:daysBetween};
+var api={checklist:checklist,FIRST_STEPS:FIRST_STEPS,KINDS:KINDS,SECTIONS:SECTIONS,clean:clean,last4:last4,risky:risky,count:count,shareable:shareable,kindLabel:kindLabel,reviewDue:reviewDue,daysBetween:daysBetween};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.LegacyCore=api;
 })(typeof self!=="undefined"?self:this);

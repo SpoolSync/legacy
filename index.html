@@ -83,6 +83,12 @@ dialog::backdrop{background:rgba(10,10,8,.55)}
 .read .kv dt{color:var(--muted)}.read .kv dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .read dl{margin:0}.read a{color:var(--accent)}
 .letter{white-space:pre-wrap;font-family:Georgia,serif;font-size:16px;line-height:1.6}
+#walletcard{display:none}
+@media print{body.printcard>*{display:none!important}body.printcard #walletcard{display:block!important}
+  .wc{display:flex;width:171.2mm;height:54mm;border:1px dashed #999;font:9pt/1.3 -apple-system,system-ui,sans-serif;color:#000}
+  .wcf{width:85.6mm;padding:4mm;box-sizing:border-box;border-right:1px dashed #999;overflow:hidden}.wcf:last-child{border-right:0}.wcf p{margin:0 0 2mm}
+  .wct{font-weight:700;font-size:10pt}.wcn{font-style:italic}.wcs{font-family:ui-monospace,Menlo,monospace;font-size:8pt}
+  @page{margin:12mm}}
 @media print{.tabs,.top .row,.status,.noprint,#pk-legacy{display:none!important}body{background:#fff;color:#000}.card{border:1px solid #999;break-inside:avoid}.wrap{padding:0}}
 
 </style>

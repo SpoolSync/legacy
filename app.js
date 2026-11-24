@@ -106,7 +106,8 @@ function fileView(){
     '<p class="note">Never write full account numbers, card numbers, your SIN or passwords here. Write where to find things instead. This doesn\'t replace a will.</p></section>';
   h+='<section class="card"><div class="secthead"><h2>'+(S.me.name?esc(S.me.name)+"’s file":"Your file")+'</h2><button class="add noprint" data-act="me">'+(S.me.name?"Change name":"Add your name")+'</button></div>'+
     '<p class="note">'+(S.reviewed?"Last reviewed "+esc(niceIso(S.reviewed)):"Not reviewed yet")+(due&&n?'. Worth a look once a year, and after a move, marriage, birth or new policy.':"")+'</p>'+
-    '<div class="row noprint">'+(n?'<button class="btn q s" data-act="reviewed">Mark reviewed today</button><button class="btn q s" data-act="preview">See what they\'d see</button>':"")+'<button class="btn q s" data-act="print">Print</button></div></section>';
+    '<div class="row noprint">'+(n?'<button class="btn q s" data-act="reviewed">Mark reviewed today</button><button class="btn q s" data-act="preview">See what they\'d see</button>':"")+'<button class="btn q s" data-act="print">Print</button><button class="btn q s" data-act="wallet">Wallet card</button></div></section>';
+  h+=checkCard();
   L.SECTIONS.forEach(function(sec){
     var list=S.items[sec.k]||[];
     h+='<section class="card"><div class="secthead"><h2>'+esc(sec.t)+'</h2><button class="add noprint" data-act="new" data-s="'+sec.k+'">+ Add '+esc(sec.one)+'</button></div>'+(list.length?"":'<p class="note">'+esc(sec.blurb)+'</p>')+list.map(function(x){return entryLine(sec,x);}).join("")+'</section>';
@@ -114,6 +115,36 @@ function fileView(){
   h+='<section class="card"><div class="secthead"><h2>Wishes</h2><button class="add noprint" data-act="wishes">'+(S.wishes?"Edit":"+ Add")+'</button></div>'+
     (S.wishes?'<p style="white-space:pre-wrap">'+esc(S.wishes.slice(0,600))+(S.wishes.length>600?"…":"")+'</p>':'<p class="note">Funeral or memorial, organ donation, who takes the pets, anything else.</p>')+'</section>';
   return h+'<p class="note">Encrypted on this phone before it syncs. Pixora, the server and any AI can\'t read it. A trusted person can only open it the way you set up under Trusted people.</p>';
+}
+/* How complete the file is, with a button for each missing piece. */
+function checkCard(){
+  var trusted=mine.some(function(g){return ["active","requested","released"].indexOf(g.status)>=0;});
+  var c=L.checklist(S,iso(),trusted),done=c.filter(function(x){return x[2];}).length;
+  if(done===c.length)return '<section class="card noprint"><p class="small"><b>All '+c.length+' parts are filled in.</b> Look it over once a year.</p></section>';
+  var h='<section class="card noprint"><div class="secthead"><h2>'+done+' of '+c.length+' done</h2></div><div class="bar" style="height:8px;border-radius:4px;background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round(100*done/c.length)+'%;background:var(--accent)"></i></div>';
+  c.filter(function(x){return !x[2];}).slice(0,5).forEach(function(x){
+    var act=x[3]==="wishes"?'data-act="wishes"':x[3]==="trust"?'data-act="tab" data-t="trust"':x[3]==="review"?'data-act="reviewed"':'data-act="new" data-s="'+x[3]+'"';
+    h+='<button class="ent" '+act+'><b>'+esc(x[1])+'</b><span>Add it</span></button>';
+  });
+  return h+'</section>';
+}
+/* A wallet-size card: who to call, and where the file is. */
+function walletDialog(){
+  var ppl=(S.items.people||[]).filter(function(p){return p.phone;});
+  var opt=function(sel){return '<option value="">None</option>'+ppl.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===sel?" selected":"")+'>'+esc(p.name)+' · '+esc(L.kindLabel("role",p.role))+'</option>';}).join("");};
+  dlg('<h2>Wallet card</h2><p class="small muted">A card to keep in your wallet: who to call in an emergency, and that your details are in Legacy. Print it, cut it out, fold it in half.</p>'+
+    (ppl.length?'<label class="f">First contact<select id="w-c1">'+opt(S.card.c1||(ppl[0]&&ppl[0].id))+'</select></label><label class="f">Second contact<select id="w-c2">'+opt(S.card.c2)+'</select></label>':'<p class="small">Add people with phone numbers under People first.</p>')+
+    '<label class="f">Note (optional)<input type="text" id="w-note" maxlength="160" value="'+esc(S.card.note)+'" placeholder="Organ donor. Allergic to penicillin."></label>'+
+    '<div class="row"><button class="btn p" data-act="printwallet">Print the card</button><button class="btn q" data-act="close">Close</button></div>');
+}
+function printWallet(){
+  var byId=function(id){return (S.items.people||[]).filter(function(p){return p.id===id;})[0];},c1=byId(S.card.c1),c2=byId(S.card.c2),tr=mine.filter(function(g){return g.status!=="invited"&&g.trusteeName;})[0];
+  var line=function(p){return p?'<p><b>'+esc(p.name)+'</b> · '+esc(L.kindLabel("role",p.role))+'<br>'+esc(p.phone)+'</p>':"";};
+  var el=$("#walletcard")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"walletcard"}));
+  el.innerHTML='<div class="wc"><div class="wcf"><p class="wct">In an emergency, please call</p>'+line(c1)+line(c2)+(S.card.note?'<p class="wcn">'+esc(S.card.note)+'</p>':"")+'</div>'+
+    '<div class="wcf"><p class="wct">'+esc(S.me.name||"")+'</p><p>My will, insurance and wishes are recorded in Pixora Legacy.'+(tr?' '+esc(tr.trusteeName)+' can open them.':"")+'</p><p class="wcs">spoolsync.github.io/legacy</p></div></div>';
+  document.body.classList.add("printcard");var off=function(){document.body.classList.remove("printcard");window.removeEventListener("afterprint",off);};window.addEventListener("afterprint",off);
+  setTimeout(function(){window.print();setTimeout(off,1500);},50);K.track("wallet_print");
 }
 function statusPill(g){
   var m={invited:["Invite sent",""],accepted:["Needs your OK","bad"],active:["Set up","on"],requested:["Asked to open","bad"],released:["Can open now","on"]}[g.status]||[g.status,""];
@@ -164,6 +195,9 @@ function readView(d,who){
     h+='</section>';
   });
   if(d.wishes)h+='<section class="card read"><h2>Wishes</h2><p style="white-space:pre-wrap">'+esc(d.wishes)+'</p></section>';
+  var tk=viewing&&viewing.gid?(S.ticks[viewing.gid]||{}):{},done=L.FIRST_STEPS.filter(function(x){return tk[x[0]];}).length;
+  h+='<section class="card read"><h2>First steps'+(who?" ("+done+" of "+L.FIRST_STEPS.length+")":"")+'</h2><p class="note">For whoever settles things in Ontario. General information, not legal advice; a lawyer can confirm what applies.'+(who?" Ticks are saved on your phone only.":"")+'</p>'+
+    L.FIRST_STEPS.map(function(x){return '<label class="chk" style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line)"><input type="checkbox" data-act="tick" data-k="'+x[0]+'"'+(tk[x[0]]?" checked":"")+(who?"":" disabled")+'><span>'+esc(x[1])+'</span></label>';}).join("")+'</section>';
   return h;
 }
 function settingsView(){
@@ -224,7 +258,7 @@ async function joinFlow(gid,tok){
 
 /* ---------- events ---------- */
 document.addEventListener("click",async function(e){
-  var b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||b.tagName==="INPUT")return;
+  var b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||(b.tagName==="INPUT"&&b.type!=="checkbox"))return;
   var a=b.dataset.act,id=b.dataset.id;
   try{
   if(a==="tab"){tab=b.dataset.t;render();}
@@ -246,6 +280,9 @@ document.addEventListener("click",async function(e){
   else if(a==="savewish"){S.wishes=$("#w-text").value.slice(0,6000);save();closeDlg();K.track("wishes");}
   else if(a==="reviewed"){S.reviewed=iso();save();render();toast("Marked reviewed today.");K.track("reviewed");}
   else if(a==="print"){K.track("print");window.print();}
+  else if(a==="wallet")walletDialog();
+  else if(a==="printwallet"){if($("#w-c1"))S.card.c1=$("#w-c1").value;if($("#w-c2"))S.card.c2=$("#w-c2").value;S.card.note=$("#w-note").value.slice(0,160);save();closeDlg();printWallet();}
+  else if(a==="tick"&&viewing&&viewing.gid){var tg=S.ticks[viewing.gid]=S.ticks[viewing.gid]||{};if(b.checked)tg[b.dataset.k]=1;else delete tg[b.dataset.k];K.save(S);K.track("first_step_tick");var h2=b.closest("section").querySelector("h2");if(h2)h2.textContent="First steps ("+Object.keys(tg).length+" of "+L.FIRST_STEPS.length+")";}
   else if(a==="preview"){viewing={data:L.shareable(S)};render();window.scrollTo(0,0);K.track("preview");}
   else if(a==="closeview"){viewing=null;render();fillCodes();}
   else if(a==="invite")inviteDialog();
@@ -295,7 +332,7 @@ document.addEventListener("click",async function(e){
   else if(a==="open"){
     var sg=shared.filter(function(x){return x.id===id;})[0];b.disabled=true;
     try{var snap=await G(id).collection("copy").doc("data").get({source:"server"});if(!snap.exists)throw 0;
-      var k=await unwrapKey(sg.wk),d=await openCopy(k,snap.data());viewing={data:d,who:true};render();window.scrollTo(0,0);K.track("open_shared");}
+      var k=await unwrapKey(sg.wk),d=await openCopy(k,snap.data());viewing={data:d,who:true,gid:id};render();window.scrollTo(0,0);K.track("open_shared");}
     catch(x){b.disabled=false;toast(S.keys?"Couldn't open it yet. Check the connection.":"This phone doesn't have the key you accepted with. Open Legacy on that phone.");}
   }
   else if(a==="delall"){
