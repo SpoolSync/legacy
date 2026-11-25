@@ -8,4 +8,13 @@ t("flags full numbers and passwords, not phone numbers",function(){
 t("shared copy has no keys or invites",function(){var s=L.clean({me:{name:"S"},grants:{g:{k:"x"}},invites:{g:"t"},keys:{priv:{},pub:"p"}});var c=L.shareable(s);
   assert.ok(!c.grants&&!c.invites&&!c.keys);assert.strictEqual(c.me.name,"S");});
 t("yearly review",function(){assert.ok(L.reviewDue(L.clean({}),"2026-11-22"));assert.ok(!L.reviewDue(L.clean({reviewed:"2026-03-01"}),"2026-11-22"));assert.ok(L.reviewDue(L.clean({reviewed:"2025-11-01"}),"2026-11-22"));});
+t("first steps and labels follow the owner's country",function(){
+  assert.ok(/Ontario/.test(L.firstSteps("CA").map(function(x){return x[1];}).join(" ")));
+  assert.ok(/Social Security/.test(L.firstSteps("US").map(function(x){return x[1];}).join(" ")));
+  assert.ok(/EPFO/.test(L.firstSteps("IN").map(function(x){return x[1];}).join(" ")));
+  assert.strictEqual(L.kindLabel("acct","k401","US"),"401(k) / 403(b)");assert.strictEqual(L.kindLabel("acct","epf","CA"),"EPF / VPF");
+  assert.strictEqual(L.kindLabel("acct","bank","IN"),"Savings account or FD");
+  assert.ok(L.risky("Aadhaar 1234 5678 9012"));assert.strictEqual(L.risky("Call +91 98765 43210"),"");
+  assert.strictEqual(L.shareable(L.clean({country:"IN"})).country,"");
+});
 console.log(n+" tests passed");

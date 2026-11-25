@@ -10,14 +10,15 @@ var enc=new TextEncoder(),dec=new TextDecoder(),sub=crypto.subtle;
 function $(s){return document.querySelector(s);}
 function z(n){return String(n).padStart(2,"0");}
 function iso(d){d=d||new Date();return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}
-function nice(ms){return new Date(ms).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});}
+function nice(ms){return new Date(ms).toLocaleDateString(window.PixoraCountry?PixoraCountry.locale():"en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});}
 function niceIso(s){return s?nice(Date.parse(s+"T12:00:00")):"";}
 var tt=null;function toast(m){var t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true;},4000);}
 function rnd(n){return crypto.getRandomValues(new Uint8Array(n));}
 function b64(u){var s="";for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s);}
 function unb64(s){var b=atob(s),o=new Uint8Array(b.length);for(var i=0;i<b.length;i++)o[i]=b.charCodeAt(i);return o;}
 function b64url(u){return b64(u).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
-function sel(list,v){return (L.KINDS[list]||[]).map(function(k){return '<option value="'+k[0]+'"'+(k[0]===v?" selected":"")+'>'+esc(k[1])+'</option>';}).join("");}
+function CC(){return (S&&S.country)||(window.PixoraCountry?PixoraCountry.get():"CA");}
+function sel(list,v){var ks=L.kinds(list,CC()).slice();if(v&&!ks.some(function(k){return k[0]===v;})&&L.kindLabel(list,v))ks.push([v,L.kindLabel(list,v)]);return ks.map(function(k){return '<option value="'+k[0]+'"'+(k[0]===v?" selected":"")+'>'+esc(k[1])+'</option>';}).join("");}
 function save(){K.save(S);queueCopies();}
 
 /* ---------- crypto for the trusted person's copy ---------- */
@@ -103,7 +104,7 @@ function entryLine(sec,x){
 function fileView(){
   var h=header("Legacy","My file")+alerts(),n=L.count(S),due=L.reviewDue(S,iso());
   if(!n)h+='<section class="card"><h2>What this is for</h2><p>If something happened to you, the people you trust would need to know where your will is, who your executor is, what insurance you have and who it pays, and what needs cancelling. This keeps all of that in one place, with a trusted person who can open it after a waiting period you can stop.</p>'+
-    '<p class="note">Never write full account numbers, card numbers, your SIN or passwords here. Write where to find things instead. This doesn\'t replace a will.</p></section>';
+    '<p class="note">Never write full account numbers, card numbers, ID numbers (SIN, SSN, Aadhaar) or passwords here. Write where to find things instead. This doesn\'t replace a will.</p></section>';
   h+='<section class="card"><div class="secthead"><h2>'+(S.me.name?esc(S.me.name)+"’s file":"Your file")+'</h2><button class="add noprint" data-act="me">'+(S.me.name?"Change name":"Add your name")+'</button></div>'+
     '<p class="note">'+(S.reviewed?"Last reviewed "+esc(niceIso(S.reviewed)):"Not reviewed yet")+(due&&n?'. Worth a look once a year, and after a move, marriage, birth or new policy.':"")+'</p>'+
     '<div class="row noprint">'+(n?'<button class="btn q s" data-act="reviewed">Mark reviewed today</button><button class="btn q s" data-act="preview">See what they\'d see</button>':"")+'<button class="btn q s" data-act="print">Print</button><button class="btn q s" data-act="wallet">Wallet card</button></div></section>';
@@ -119,7 +120,7 @@ function fileView(){
 /* How complete the file is, with a button for each missing piece. */
 function checkCard(){
   var trusted=mine.some(function(g){return ["active","requested","released"].indexOf(g.status)>=0;});
-  var c=L.checklist(S,iso(),trusted),done=c.filter(function(x){return x[2];}).length;
+  var c=L.checklist(S,iso(),trusted,CC()),done=c.filter(function(x){return x[2];}).length;
   if(done===c.length)return '<section class="card noprint"><p class="small"><b>All '+c.length+' parts are filled in.</b> Look it over once a year.</p></section>';
   var h='<section class="card noprint"><div class="secthead"><h2>'+done+' of '+c.length+' done</h2></div><div class="bar" style="height:8px;border-radius:4px;background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round(100*done/c.length)+'%;background:var(--accent)"></i></div>';
   c.filter(function(x){return !x[2];}).slice(0,5).forEach(function(x){
@@ -195,13 +196,16 @@ function readView(d,who){
     h+='</section>';
   });
   if(d.wishes)h+='<section class="card read"><h2>Wishes</h2><p style="white-space:pre-wrap">'+esc(d.wishes)+'</p></section>';
-  var tk=viewing&&viewing.gid?(S.ticks[viewing.gid]||{}):{},done=L.FIRST_STEPS.filter(function(x){return tk[x[0]];}).length;
-  h+='<section class="card read"><h2>First steps'+(who?" ("+done+" of "+L.FIRST_STEPS.length+")":"")+'</h2><p class="note">For whoever settles things in Ontario. General information, not legal advice; a lawyer can confirm what applies.'+(who?" Ticks are saved on your phone only.":"")+'</p>'+
-    L.FIRST_STEPS.map(function(x){return '<label class="chk" style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line)"><input type="checkbox" data-act="tick" data-k="'+x[0]+'"'+(tk[x[0]]?" checked":"")+(who?"":" disabled")+'><span>'+esc(x[1])+'</span></label>';}).join("")+'</section>';
+  /* The steps follow the file owner's country, not the reader's. */
+  var oc=d.country||CC(),FS=L.firstSteps(oc);
+  var tk=viewing&&viewing.gid?(S.ticks[viewing.gid]||{}):{},done=FS.filter(function(x){return tk[x[0]];}).length;
+  h+='<section class="card read"><h2>First steps'+(who?" ("+done+" of "+FS.length+")":"")+'</h2><p class="note">For whoever settles things in '+esc(L.stepsWhere(oc))+'. General information, not legal advice; a lawyer can confirm what applies.'+(who?" Ticks are saved on your phone only.":"")+'</p>'+
+    FS.map(function(x){return '<label class="chk" style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line)"><input type="checkbox" data-act="tick" data-k="'+x[0]+'"'+(tk[x[0]]?" checked":"")+(who?"":" disabled")+'><span>'+esc(x[1])+'</span></label>';}).join("")+'</section>';
   return h;
 }
 function settingsView(){
   var h='<button class="btn q s" data-act="tab" data-t="file" style="align-self:flex-start">← Back</button><h1>Settings</h1>';
+  if(window.PixoraCountry)h+=PixoraCountry.picker("Sets the first steps your family sees (Ontario, the US or India) and the account and document types here.");
   h+='<section class="card"><h2>Your copy</h2><p class="small muted">Download everything in Legacy as a file you keep, and bring it back here or on a new phone. It\'s a plain file, not encrypted, so keep it somewhere private, like a password manager or with your will. It doesn\'t include your trusted people.</p><div class="row"><button class="btn" data-act="export">Download a copy</button><label class="btn q" style="cursor:pointer">Restore from a copy<input type="file" id="restore" accept=".json,application/json" hidden></label></div></section>';
   h+='<section class="card"><h2>Ideas or problems?</h2><p class="small muted">Tell Sachin what would make Legacy better or what went wrong. Nothing from your data is sent.</p><div class="row"><button class="btn" data-act="feedback">Send feedback</button></div></section>';
   h+='<section class="card"><h2>Account</h2>'+(K.local?'<p class="small">On this phone only.</p><div class="row"><button class="btn" data-act="join">Sign in or create a Pixora account</button></div>':
