@@ -16,5 +16,7 @@ t("first steps and labels follow the owner's country",function(){
   assert.strictEqual(L.kindLabel("acct","bank","IN"),"Savings account or FD");
   assert.ok(L.risky("Aadhaar 1234 5678 9012"));assert.strictEqual(L.risky("Call +91 98765 43210"),"");
   assert.strictEqual(L.shareable(L.clean({country:"IN"})).country,"");
+  assert.ok(/Tell Us Once/.test(L.firstSteps("GB").map(function(x){return x[1];}).join(" ")));assert.strictEqual(L.kindLabel("acct","lisa","GB"),"Lifetime ISA");
+  assert.strictEqual(L.risky("Call 07700 900123"),"");assert.strictEqual(L.risky("Call +44 20 7946 0958"),"");assert.ok(L.risky("Account 12345678 sort 12-34-56"));
 });
 console.log(n+" tests passed");

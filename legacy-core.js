@@ -13,6 +13,10 @@ var KINDS_BY={
     doc:[["will","Will"],["trust","Living trust"],["poa-property","Durable power of attorney, finances"],["poa-care","Health care proxy"],["living-will","Living will / advance directive"],["marriage","Marriage or divorce papers"],["deed","Property deed"],["tax","Tax returns"],["other","Other"]],
     acct:[["bank","Checking or savings"],["k401","401(k) / 403(b)"],["ira","IRA or Roth IRA"],["hsa","HSA"],["p529","529 plan"],["brokerage","Brokerage"],["pension","Work pension"],["gov","Social Security"],["crypto","Crypto"],["other","Other"]],
     ins:[["life","Life"],["group-life","Life, through work"],["disability","Disability"],["ltc","Long-term care"],["mortgage","Mortgage"],["home","Home or renters"],["auto","Car"],["health","Health"],["other","Other"]]},
+  GB:{role:[["executor","Executor"],["alt-executor","Backup executor"],["poa-property","Attorney, property and financial affairs"],["poa-care","Attorney, health and welfare"],["guardian","Guardian for children"],["trustee","Trustee"],["solicitor","Solicitor"],["accountant","Accountant"],["advisor","Financial adviser"],["family","Family"],["other","Other"]],
+    doc:[["will","Will"],["poa-property","Lasting power of attorney, property and finance"],["poa-care","Lasting power of attorney, health and welfare"],["living-will","Advance decision (living will)"],["trust","Trust deed"],["marriage","Marriage or civil partnership certificate"],["deed","Property deeds / title"],["tax","Tax returns"],["other","Other"]],
+    acct:[["bank","Current or savings account"],["isa","ISA (stocks and shares or cash)"],["lisa","Lifetime ISA"],["sipp","SIPP / personal pension"],["wpp","Workplace pension"],["gov","State Pension"],["premium","Premium Bonds"],["gia","General investment account"],["crypto","Crypto"],["other","Other"]],
+    ins:[["life","Life"],["group-life","Death in service (work)"],["income","Income protection"],["critical","Critical illness"],["mortgage","Mortgage protection"],["home","Home or contents"],["auto","Car"],["health","Private health"],["funeral","Funeral plan"],["other","Other"]]},
   IN:{role:[["executor","Executor"],["alt-executor","Backup executor"],["poa-property","Power of attorney holder"],["nominee","Nominee"],["guardian","Guardian for children"],["lawyer","Lawyer"],["accountant","Chartered accountant"],["advisor","Financial advisor"],["family","Family"],["other","Other"]],
     doc:[["will","Will"],["registered-will","Registered will (sub-registrar)"],["poa-property","Power of attorney"],["living-will","Living will / advance directive"],["nomination","Nomination forms"],["marriage","Marriage certificate"],["deed","Property sale deed"],["tax","ITR acknowledgements"],["other","Other"]],
     acct:[["bank","Savings account or FD"],["demat","Demat (shares)"],["mf","Mutual funds"],["ppf","PPF"],["epf","EPF / VPF"],["nps","NPS"],["ssy","Sukanya Samriddhi"],["pension","Pension"],["locker","Bank locker"],["crypto","Crypto"],["other","Other"]],
@@ -63,7 +67,7 @@ function last4(v){var d=String(v==null?"":v).replace(/\D/g,"");return d.slice(-4
 /* Things that look like secrets: long digit runs (card, account, SIN numbers) or passwords. Phone and date fields are exempt. */
 function risky(text){
   text=String(text||"");
-  if(/(?:\d[\s-]?){8,}/.test(text.replace(/\(\d{3}\)\s?\d{3}-\d{4}|\+?1?[\s-]?\d{3}[\s-]\d{3}[\s-]\d{4}|\+91[\s-]?\d{5}[\s-]?\d{5}/g,"")))return "That looks like a full account, card or ID number (SIN, SSN, Aadhaar or PAN). Keep only the last 4 digits here.";
+  if(/(?:\d[\s-]?){8,}/.test(text.replace(/\(\d{3}\)\s?\d{3}-\d{4}|\+?1?[\s-]?\d{3}[\s-]\d{3}[\s-]\d{4}|\+91[\s-]?\d{5}[\s-]?\d{5}|(?:\+44[\s-]?|\b0)(?:\d[\s-]?){9,10}\b/g,"")))return "That looks like a full account, card or ID number (SIN, SSN, National Insurance, Aadhaar or PAN). Keep only the last 4 digits here.";
   if(/\b(password|passcode|pin|pwd)\s*[:=]/i.test(text))return "Don't write passwords or PINs here. Say where to find them instead, like a password manager's emergency kit.";
   return "";
 }
@@ -76,9 +80,9 @@ function checklist(s,today,hasTrusted,c){
   return [
     ["will","Where your original will is",has("docs",function(x){return x.kind==="will"&&x.where;}),"docs"],
     ["executor","Who your executor is",has("people",function(x){return x.role==="executor";}),"people"],
-    ["poa",c==="US"?"Power of attorney and health care proxy":c==="IN"?"Power of attorney and nominations":"Powers of attorney (property and personal care)",has("docs",function(x){return x.kind==="poa-property";})&&has("docs",function(x){return x.kind==="poa-care";})||has("people",function(x){return x.role==="poa-property";})&&has("people",function(x){return x.role==="poa-care";}),"docs"],
+    ["poa",c==="US"?"Power of attorney and health care proxy":c==="GB"?"Lasting powers of attorney (finance and health)":c==="IN"?"Power of attorney and nominations":"Powers of attorney (property and personal care)",has("docs",function(x){return x.kind==="poa-property";})&&has("docs",function(x){return x.kind==="poa-care";})||has("people",function(x){return x.role==="poa-property";})&&has("people",function(x){return x.role==="poa-care";}),"docs"],
     ["insurance","Insurance and who it pays",has("insurance",function(x){return x.benef;}),"insurance"],
-    ["accounts",c==="US"?"Bank accounts, retirement plans and pensions":c==="IN"?"Bank accounts, PPF, EPF, demat and pensions":"Bank accounts, registered plans and pensions",has("accounts"),"accounts"],
+    ["accounts",c==="US"?"Bank accounts, retirement plans and pensions":c==="GB"?"Bank accounts, ISAs and pensions":c==="IN"?"Bank accounts, PPF, EPF, demat and pensions":"Bank accounts, registered plans and pensions",has("accounts"),"accounts"],
     ["bills","Bills and debts to settle or cancel",has("bills"),"bills"],
     ["digital","How to get into phones and online accounts",has("digital"),"digital"],
     ["wishes","Your wishes",!!s.wishes,"wishes"],
@@ -112,6 +116,17 @@ var STEPS={
   ["probate","Ask a probate lawyer or the county probate court whether probate is needed. Each state has its own rules and a simpler path for small estates."],
   ["ein","If the estate earns income, get an EIN for it from the IRS and open an estate account."],
   ["tax","File the final federal and state income tax returns by the next tax day, and Form 1041 if the estate has $600 or more of income."]]},
+  GB:{where:"the UK",steps:[
+  ["will","Find the original will. The executors named in it deal with the estate."],
+  ["register","Register the death within 5 days (8 in Scotland) of the medical examiner's confirmation, and order several death certificates."],
+  ["funeral","Arrange the funeral, following the wishes in this file. A funeral plan or bank may help pay."],
+  ["tellusonce","Use Tell Us Once (the registrar gives the reference) to tell HMRC, DWP, the Passport Office, DVLA and the council in one go."],
+  ["insurers","Call each insurer and the employer (death-in-service) in this file to start the claims."],
+  ["banks","Tell the banks, ISA, pension and investment providers. Pensions often pay out to the person on the nomination form, outside the will."],
+  ["bills","Cancel or transfer bills, council tax, subscriptions and the TV licence listed here."],
+  ["probate","Check whether probate (or confirmation in Scotland) is needed; small estates sometimes don't. Apply on GOV.UK or through a solicitor."],
+  ["iht","Value the estate and check if Inheritance Tax is due; it must be reported and any tax paid before probate in most cases."],
+  ["tax","Settle the person's final income tax with HMRC, then pay debts before sharing out what's left."]]},
   IN:{where:"India",steps:[
   ["will","Find the will, if there is one. Without a will, succession law decides who inherits; a lawyer can explain which law applies."],
   ["certs","Make sure the death is registered with the municipal or panchayat registrar (within 21 days; hospitals usually do it) and get several copies of the death certificate."],

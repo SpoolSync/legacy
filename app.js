@@ -104,7 +104,7 @@ function entryLine(sec,x){
 function fileView(){
   var h=header("Legacy","My file")+alerts(),n=L.count(S),due=L.reviewDue(S,iso());
   if(!n)h+='<section class="card"><h2>What this is for</h2><p>If something happened to you, the people you trust would need to know where your will is, who your executor is, what insurance you have and who it pays, and what needs cancelling. This keeps all of that in one place, with a trusted person who can open it after a waiting period you can stop.</p>'+
-    '<p class="note">Never write full account numbers, card numbers, ID numbers (SIN, SSN, Aadhaar) or passwords here. Write where to find things instead. This doesn\'t replace a will.</p></section>';
+    '<p class="note">Never write full account numbers, card numbers, ID numbers (SIN, SSN, NI number, Aadhaar) or passwords here. Write where to find things instead. This doesn\'t replace a will.</p></section>';
   h+='<section class="card"><div class="secthead"><h2>'+(S.me.name?esc(S.me.name)+"’s file":"Your file")+'</h2><button class="add noprint" data-act="me">'+(S.me.name?"Change name":"Add your name")+'</button></div>'+
     '<p class="note">'+(S.reviewed?"Last reviewed "+esc(niceIso(S.reviewed)):"Not reviewed yet")+(due&&n?'. Worth a look once a year, and after a move, marriage, birth or new policy.':"")+'</p>'+
     '<div class="row noprint">'+(n?'<button class="btn q s" data-act="reviewed">Mark reviewed today</button><button class="btn q s" data-act="preview">See what they\'d see</button>':"")+'<button class="btn q s" data-act="print">Print</button><button class="btn q s" data-act="wallet">Wallet card</button></div></section>';
@@ -205,7 +205,7 @@ function readView(d,who){
 }
 function settingsView(){
   var h='<button class="btn q s" data-act="tab" data-t="file" style="align-self:flex-start">← Back</button><h1>Settings</h1>';
-  if(window.PixoraCountry)h+=PixoraCountry.picker("Sets the first steps your family sees (Ontario, the US or India) and the account and document types here.");
+  if(window.PixoraCountry)h+=PixoraCountry.picker("Sets the first steps your family sees (Ontario, the US, the UK or India) and the account and document types here.");
   h+='<section class="card"><h2>Your copy</h2><p class="small muted">Download everything in Legacy as a file you keep, and bring it back here or on a new phone. It\'s a plain file, not encrypted, so keep it somewhere private, like a password manager or with your will. It doesn\'t include your trusted people.</p><div class="row"><button class="btn" data-act="export">Download a copy</button><label class="btn q" style="cursor:pointer">Restore from a copy<input type="file" id="restore" accept=".json,application/json" hidden></label></div></section>';
   h+='<section class="card"><h2>Ideas or problems?</h2><p class="small muted">Tell Sachin what would make Legacy better or what went wrong. Nothing from your data is sent.</p><div class="row"><button class="btn" data-act="feedback">Send feedback</button></div></section>';
   h+='<section class="card"><h2>Account</h2>'+(K.local?'<p class="small">On this phone only.</p><div class="row"><button class="btn" data-act="join">Sign in or create a Pixora account</button></div>':
